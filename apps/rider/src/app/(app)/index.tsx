@@ -185,7 +185,7 @@ export default function Today() {
             ]}
           />
           <T muted size={12}>
-            Red: deliver now (tap the name to open). Orange: not picked up yet.
+            Red: deliver now (tap the name to navigate). Orange: not picked up yet.
           </T>
         </View>
       )}
@@ -269,19 +269,15 @@ export default function Today() {
                 onPress={() => Linking.openURL(`tel:${o.customer_phone}`)}
               />
               <Button
-                title="Map"
+                title="Code"
                 variant="secondary"
                 style={{ flex: 1 }}
-                onPress={() =>
-                  Linking.openURL(
-                    `https://www.google.com/maps/search/?api=1&query=${o.location_lat},${o.location_lng}`,
-                  )
-                }
+                onPress={() => router.push({ pathname: '/order/[id]', params: { id: o.id } })}
               />
               <Button
-                title="Deliver"
-                style={{ flex: 1.4 }}
-                onPress={() => router.push({ pathname: '/order/[id]', params: { id: o.id } })}
+                title="Navigate"
+                style={{ flex: 1.6 }}
+                onPress={() => router.push({ pathname: '/navigate/[id]', params: { id: o.id } })}
               />
             </View>
           </Card>

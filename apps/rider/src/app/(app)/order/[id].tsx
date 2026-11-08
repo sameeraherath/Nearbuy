@@ -60,12 +60,9 @@ export default function DeliverScreen() {
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
             <Button title="Call" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(`tel:${order.customer_phone}`)} />
             <Button
-              title="Map"
-              variant="secondary"
-              style={{ flex: 1 }}
-              onPress={() =>
-                Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${order.location_lat},${order.location_lng}`)
-              }
+              title="Navigate"
+              style={{ flex: 1.6 }}
+              onPress={() => router.push({ pathname: '/navigate/[id]', params: { id: order.id } })}
             />
           </View>
         </Card>

@@ -14,6 +14,7 @@ export default function AppLayout() {
     >
       <Stack.Screen name="index" options={{ title: "Today's run" }} />
       <Stack.Screen name="order/[id]" options={{ title: 'Delivery' }} />
+      <Stack.Screen name="navigate/[id]" options={{ headerShown: false }} />
     </Stack>
   );
 }

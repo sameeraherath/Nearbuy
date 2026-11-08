@@ -2,9 +2,9 @@ import { View } from 'react-native';
 import { APIProvider, Map, Marker } from '@vis.gl/react-google-maps';
 import { C } from '@/components/ui';
 import { PIN_COLORS, type LiveMapProps } from './types';
-import { FitTo, MAPS_KEY, NoKey, dot } from './web-map';
+import { FitTo, MAPS_KEY, NoKey, RouteLine, dot } from './web-map';
 
-export function LiveMap({ points, height = 240 }: LiveMapProps) {
+export function LiveMap({ points, height = 240, route, routeIsEstimate }: LiveMapProps) {
   if (!MAPS_KEY) return <NoKey height={height} />;
   const first = points[0];
   return (
@@ -28,7 +28,8 @@ export function LiveMap({ points, height = 240 }: LiveMapProps) {
               onClick={p.onPress}
             />
           ))}
-          <FitTo points={points} />
+          {route && route.length > 1 && <RouteLine points={route} dashed={routeIsEstimate} />}
+          <FitTo points={points.map((p) => ({ lat: Number(p.lat.toFixed(3)), lng: Number(p.lng.toFixed(3)) }))} />
         </Map>
       </APIProvider>
     </View>

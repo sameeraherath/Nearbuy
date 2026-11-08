@@ -25,4 +25,3 @@ AppState.addEventListener('change', (state) => {
 export function photoUrl(bucket: string, path: string | null | undefined) {
   return path ? `${url}/storage/v1/object/public/${bucket}/${path}` : null;
 }
-

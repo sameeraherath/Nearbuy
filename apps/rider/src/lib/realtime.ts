@@ -7,7 +7,11 @@ type Handlers = Record<string, (payload: Record<string, unknown>) => void>;
  * Subscribes to a private broadcast topic (e.g. `order:<id>`, `rider:<id>`).
  * `onChange` runs on `order_changed`; `extra` maps other event names to handlers.
  */
-export function useOrderBroadcast(topic: string | null, onChange: () => void, extra: Handlers = {}) {
+export function useOrderBroadcast(
+  topic: string | null,
+  onChange: () => void,
+  extra: Handlers = {},
+) {
   const latest = useRef({ onChange, extra });
   latest.current = { onChange, extra };
   const events = Object.keys(extra).sort().join(',');

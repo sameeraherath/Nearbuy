@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import { C } from '@/components/ui';
 import { PIN_COLORS, type LiveMapProps } from './types';
 
 /** Read-only map that keeps all points in view. */
-export function LiveMap({ points, height = 220, showsUserLocation }: LiveMapProps) {
+export function LiveMap({ points, height = 220, showsUserLocation, route, routeIsEstimate }: LiveMapProps) {
   const ref = useRef<MapView>(null);
-  const key = points.map((p) => `${p.id}:${p.lat.toFixed(4)},${p.lng.toFixed(4)}`).join('|');
+  // Refit only when markers move noticeably (~100 m), so a gliding marker doesn't shake the camera.
+  const key = points.map((p) => `${p.id}:${p.lat.toFixed(3)},${p.lng.toFixed(3)}`).join('|');
 
   useEffect(() => {
     if (points.length === 0) return;
@@ -39,6 +40,14 @@ export function LiveMap({ points, height = 220, showsUserLocation }: LiveMapProp
         showsUserLocation={showsUserLocation}
         toolbarEnabled={false}
       >
+        {route && route.length > 1 && (
+          <Polyline
+            coordinates={route.map((p) => ({ latitude: p.lat, longitude: p.lng }))}
+            strokeColor={C.navy}
+            strokeWidth={5}
+            lineDashPattern={routeIsEstimate ? [12, 10] : undefined}
+          />
+        )}
         {points.map((p) => (
           <Marker
             key={p.id}

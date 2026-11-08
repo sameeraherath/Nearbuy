@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Location from 'expo-location';
 import { supabase } from './supabase';
 
@@ -21,11 +21,14 @@ function describeError(error: { message?: string; code?: string } | null | undef
  * send the position to the server, which pushes it to customers whose food is on the way.
  * Foreground only: in Expo Go this runs while the app is open.
  */
-export function useShareLocation(active: boolean) {
+/** Shared across screens so two watchers never upload twice. */
+let lastSent = 0;
+
+export function useShareLocation(active: boolean, { fast = false }: { fast?: boolean } = {}) {
   const [state, setState] = useState<ShareState>('off');
   const [errorText, setErrorText] = useState<string | null>(null);
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const lastSent = useRef(0);
+  const [heading, setHeading] = useState<number | null>(null);
 
   useEffect(() => {
     if (!active) {
@@ -45,13 +48,22 @@ export function useShareLocation(active: boolean) {
       }
       try {
         sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.High, timeInterval: 10000, distanceInterval: 25 },
+          // While navigating, update the map every ~2 s; otherwise every ~10 s.
+          fast
+            ? {
+                accuracy: Location.Accuracy.BestForNavigation,
+                timeInterval: 2000,
+                distanceInterval: 5,
+              }
+            : { accuracy: Location.Accuracy.High, timeInterval: 10000, distanceInterval: 25 },
           (loc) => {
             const { latitude, longitude, heading, speed, accuracy } = loc.coords;
             setPosition({ lat: latitude, lng: longitude });
+            setHeading(heading != null && heading >= 0 ? heading : null);
             const now = Date.now();
-            if (now - lastSent.current < 8000) return; // at most one update every ~8 s
-            lastSent.current = now;
+            // Customers get an update at most every ~5 s (keeps traffic and battery low).
+            if (now - lastSent < 5000) return;
+            lastSent = now;
             supabase
               .rpc('rider_update_location', {
                 p_lat: latitude,
@@ -80,7 +92,7 @@ export function useShareLocation(active: boolean) {
       cancelled = true;
       sub?.remove();
     };
-  }, [active]);
+  }, [active, fast]);
 
-  return { state, position, errorText };
+  return { state, position, heading, errorText };
 }

@@ -30,3 +30,28 @@ export const CAMPUS: LatLng = { lat: 6.7148, lng: 80.7871 };
 export function inSriLanka(p: LatLng): boolean {
   return p.lat >= 5.8 && p.lat <= 10 && p.lng >= 79.4 && p.lng <= 82;
 }
+
+/** Decodes a Google encoded polyline into points. */
+export function decodePolyline(encoded: string): LatLng[] {
+  const points: LatLng[] = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+  while (index < encoded.length) {
+    for (const axis of ['lat', 'lng'] as const) {
+      let result = 0;
+      let shift = 0;
+      let b: number;
+      do {
+        b = encoded.charCodeAt(index++) - 63;
+        result |= (b & 0x1f) << shift;
+        shift += 5;
+      } while (b >= 0x20);
+      const delta = result & 1 ? ~(result >> 1) : result >> 1;
+      if (axis === 'lat') lat += delta;
+      else lng += delta;
+    }
+    points.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return points;
+}

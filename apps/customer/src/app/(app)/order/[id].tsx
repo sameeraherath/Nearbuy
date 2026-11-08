@@ -6,7 +6,9 @@ import { supabase } from '@/lib/supabase';
 import { fetchSettings, useFocusedQuery } from '@/lib/data';
 import { useOrderBroadcast } from '@/lib/realtime';
 import { confirmAction, showMessage } from '@/lib/confirm';
-import { distanceMeters, etaMinutes, formatDistance } from '@/lib/geo';
+import { formatDistance } from '@/lib/geo';
+import { useLiveRoute } from '@/lib/route';
+import { useSmoothPosition } from '@/lib/smooth';
 import { LiveMap, type MapPoint } from '@/components/map';
 
 type RiderPos = { lat: number; lng: number; updated_at: string };
@@ -51,6 +53,14 @@ export default function OrderScreen() {
     const t = setInterval(() => setTick((n) => n + 1), 10000);
     return () => clearInterval(t);
   }, [onTheWay, id]);
+
+  // Uber-style: the rider glides along the road route towards the drop-off.
+  const ord = data?.order;
+  const homePt =
+    ord?.location_lat != null && ord?.location_lng != null ? { lat: ord.location_lat, lng: ord.location_lng } : null;
+  const riderTarget = onTheWay && rider ? { lat: rider.lat, lng: rider.lng } : null;
+  const riderSmooth = useSmoothPosition(riderTarget);
+  const live = useLiveRoute(riderTarget, onTheWay ? homePt : null);
 
   if (loading && !data) {
     return (
@@ -173,22 +183,31 @@ export default function OrderScreen() {
 
       {status !== 'cancelled' && status !== 'delivered' && o.location_lat != null && o.location_lng != null && (
         <Card style={{ gap: 8 }}>
+          {onTheWay && live && (
+            <View style={{ gap: 2 }}>
+              <T size={22} bold>
+                Arriving in about {live.minutes} min
+              </T>
+              <T muted size={14}>
+                Rider is {formatDistance(live.meters)} away{live.onRoads ? '' : ' (approx.)'}
+              </T>
+            </View>
+          )}
           <LiveMap
+            height={onTheWay ? 340 : 200}
+            route={onTheWay && live ? live.points : undefined}
+            routeIsEstimate={!!live && !live.onRoads}
             points={[
               { id: 'home', kind: 'home', lat: o.location_lat, lng: o.location_lng, title: 'Drop-off' } as MapPoint,
-              ...(onTheWay && rider ? [{ id: 'rider', kind: 'rider', lat: rider.lat, lng: rider.lng, title: 'Rider' } as MapPoint] : []),
+              ...(onTheWay && riderSmooth
+                ? [{ id: 'rider', kind: 'rider', lat: riderSmooth.lat, lng: riderSmooth.lng, title: 'Rider' } as MapPoint]
+                : []),
             ]}
           />
           {onTheWay && rider ? (
-            <View style={{ gap: 2 }}>
-              <T bold>
-                Rider is {formatDistance(distanceMeters(rider, { lat: o.location_lat, lng: o.location_lng }))} away · about{' '}
-                {etaMinutes(rider, { lat: o.location_lat, lng: o.location_lng })} min
-              </T>
-              <T muted size={12}>
-                Approximate · updated {Math.max(0, Math.round((Date.now() - new Date(rider.updated_at).getTime()) / 1000))} s ago
-              </T>
-            </View>
+            <T muted size={12}>
+              Live · updated {ago(rider.updated_at)}
+            </T>
           ) : onTheWay ? (
             <T muted size={13}>Waiting for the rider's location…</T>
           ) : (
@@ -209,4 +228,10 @@ export default function OrderScreen() {
     </ScrollView>
     </View>
   );
+}
+
+function ago(iso: string): string {
+  const sec = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 1000));
+  if (sec < 60) return `${sec} s ago`;
+  return `${Math.round(sec / 60)} min ago`;
 }

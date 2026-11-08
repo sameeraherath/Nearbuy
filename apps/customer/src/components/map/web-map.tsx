@@ -1,5 +1,5 @@
 // Web-only helpers shared by the .web.tsx map components (Google Maps JavaScript API).
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useMap } from '@vis.gl/react-google-maps';
 import { View } from 'react-native';
 import { C, T } from '@/components/ui';
@@ -57,4 +57,42 @@ export function NoKey({ height }: { height: number }) {
       </T>
     </View>
   );
+}
+
+interface GPolyline {
+  setMap(map: unknown): void;
+  setPath(path: LatLng[]): void;
+  setOptions(opts: Record<string, unknown>): void;
+}
+type GoogleNS = { maps: { Polyline: new (opts: Record<string, unknown>) => GPolyline } };
+
+/** Route line on the web map (Google Maps JS has no React component for polylines). */
+export function RouteLine({ points, dashed }: { points: LatLng[]; dashed?: boolean }) {
+  const map = useMap();
+  const line = useRef<GPolyline | null>(null);
+
+  useEffect(() => {
+    const g = (globalThis as { google?: GoogleNS }).google;
+    if (!map || !g) return;
+    line.current = new g.maps.Polyline({ map, strokeColor: '#232F3E', strokeWeight: 5, strokeOpacity: 0.9 });
+    return () => {
+      line.current?.setMap(null);
+      line.current = null;
+    };
+  }, [map]);
+
+  useEffect(() => {
+    if (!line.current) return;
+    line.current.setPath(points);
+    line.current.setOptions(
+      dashed
+        ? {
+            strokeOpacity: 0,
+            icons: [{ icon: { path: 'M 0,-1 0,1', strokeOpacity: 1, scale: 3 }, offset: '0', repeat: '14px' }],
+          }
+        : { strokeOpacity: 0.9, icons: [] },
+    );
+  }, [points, dashed]);
+
+  return null;
 }

@@ -18,6 +18,10 @@ export interface LiveMapProps {
   height?: number;
   /** Show the device's own blue dot (native only). */
   showsUserLocation?: boolean;
+  /** Route line to draw (e.g. rider → customer). */
+  route?: LatLng[];
+  /** Draw the route dashed when it is only a straight-line estimate. */
+  routeIsEstimate?: boolean;
 }
 
 export const PIN_COLORS: Record<MapPoint['kind'], string> = {
