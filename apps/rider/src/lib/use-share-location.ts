@@ -4,6 +4,18 @@ import { supabase } from './supabase';
 
 export type ShareState = 'off' | 'asking' | 'denied' | 'sharing' | 'error';
 
+/** Turns a failed location upload into a message that says what actually went wrong. */
+function describeError(error: { message?: string; code?: string } | null | undefined): string {
+  const msg = error?.message ?? '';
+  if (error?.code === 'PGRST202' || /could not find the function/i.test(msg)) {
+    return 'Live tracking is not set up on the server yet (ask admin)';
+  }
+  if (/NB_FORBIDDEN/.test(msg)) return 'Your rider account is inactive — contact admin';
+  if (/NB_LOCATION_REQUIRED/.test(msg)) return 'Your location looks outside Sri Lanka';
+  if (/network|fetch|timeout/i.test(msg)) return 'Could not share location — check your connection';
+  return msg ? `Could not share location: ${msg}` : 'Could not share location';
+}
+
 /**
  * While `active` (the rider has orders to pick up or deliver), watch the phone's GPS and
  * send the position to the server, which pushes it to customers whose food is on the way.
@@ -11,6 +23,7 @@ export type ShareState = 'off' | 'asking' | 'denied' | 'sharing' | 'error';
  */
 export function useShareLocation(active: boolean) {
   const [state, setState] = useState<ShareState>('off');
+  const [errorText, setErrorText] = useState<string | null>(null);
   const [position, setPosition] = useState<{ lat: number; lng: number } | null>(null);
   const lastSent = useRef(0);
 
@@ -47,13 +60,19 @@ export function useShareLocation(active: boolean) {
                 p_speed: speed ?? undefined,
                 p_accuracy: accuracy ?? undefined,
               })
-              .then(({ error }) => setState(error ? 'error' : 'sharing'));
+              .then(({ error }) => {
+                setState(error ? 'error' : 'sharing');
+                setErrorText(error ? describeError(error) : null);
+              });
           },
         );
         if (cancelled) sub.remove();
         else setState('sharing');
       } catch {
-        if (!cancelled) setState('error');
+        if (!cancelled) {
+          setState('error');
+          setErrorText('Could not read your GPS — check that location is turned on');
+        }
       }
     })();
 
@@ -63,5 +82,5 @@ export function useShareLocation(active: boolean) {
     };
   }, [active]);
 
-  return { state, position };
+  return { state, position, errorText };
 }

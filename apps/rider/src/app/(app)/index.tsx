@@ -113,7 +113,7 @@ export default function Today() {
       />
       <ErrorText>{error}</ErrorText>
 
-      {onRun && <SharePill state={share.state} />}
+      {onRun && <SharePill state={share.state} errorText={share.errorText} />}
 
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Stat label="Pay shops" value={formatRs(payShops)} />
@@ -314,14 +314,20 @@ export default function Today() {
   );
 }
 
-function SharePill({ state }: { state: ReturnType<typeof useShareLocation>['state'] }) {
+function SharePill({
+  state,
+  errorText,
+}: {
+  state: ReturnType<typeof useShareLocation>['state'];
+  errorText: string | null;
+}) {
   const text =
     state === 'sharing'
       ? '● Sharing your location with customers'
       : state === 'denied'
         ? 'Location is off — allow location so customers can see you coming'
         : state === 'error'
-          ? 'Could not share location — check your connection'
+          ? (errorText ?? 'Could not share location')
           : 'Starting location…';
   const ok = state === 'sharing';
   return (
