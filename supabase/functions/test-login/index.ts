@@ -6,7 +6,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2.49.1';
 import { isSriLankanMobile } from '../_shared/sms/index.ts';
 import { safeEqual, serviceClient } from '../_shared/supabase.ts';
 
-type App = 'customer' | 'rider' | 'admin';
+// Admins sign in with phone + password, never with the shared test code.
+type App = 'customer' | 'rider';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
     return reply({ error: 'Invalid request' }, 400);
   }
   const app = body.app;
-  if (app !== 'customer' && app !== 'rider' && app !== 'admin') return reply({ error: 'Invalid app' }, 400);
+  if (app !== 'customer' && app !== 'rider') return reply({ error: 'Invalid app' }, 400);
   const phone = normalize(body.phone ?? '');
   if (!phone) return reply({ error: 'Enter a Sri Lankan mobile number (07X XXX XXXX)' }, 400);
   if (!safeEqual((body.code ?? '').trim(), testCode)) return reply({ error: 'Wrong test code' }, 401);
@@ -66,7 +67,7 @@ Deno.serve(async (req) => {
       userId = data.user.id;
     }
   } else {
-    if (!profile || profile.role !== app) return reply({ error: `This number is not registered as ${app === 'admin' ? 'an admin' : 'a rider'}.` }, 403);
+    if (!profile || profile.role !== app) return reply({ error: 'This number is not registered as a rider.' }, 403);
     const rider = Array.isArray(profile.riders) ? profile.riders[0] : profile.riders;
     if (app === 'rider' && !rider?.is_active) return reply({ error: 'This rider account is inactive.' }, 403);
   }

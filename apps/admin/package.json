@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "set-password": "node scripts/set-admin-password.mjs"
   },
   "dependencies": {
     "next": "16.4.5",

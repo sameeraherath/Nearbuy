@@ -35,14 +35,24 @@ The admin panel also needs `SUPABASE_SERVICE_ROLE_KEY` (server-only) to create r
 
 ### Test login (temporary, until an SMS provider is set up)
 
-All three apps can sign in with a **shared team test code** instead of an SMS code.
+The customer and rider apps can sign in with a **shared team test code** instead of an SMS code. The admin panel never uses it (see *Admin login* below).
 
 - Server: the `test-login` Edge Function, enabled only while the `TEST_LOGIN_CODE` secret (8+ characters) is set in Supabase → Edge Functions → Secrets.
-- Apps: `EXPO_PUBLIC_TEST_LOGIN=true` (customer, rider) and `NEXT_PUBLIC_TEST_LOGIN=true` (admin).
-- Customers: any Sri Lankan number + the test code creates/opens a customer account. Riders/admin: the number must already be registered.
+- Apps: `EXPO_PUBLIC_TEST_LOGIN=true` (customer, rider).
+- Customers: any Sri Lankan number + the test code creates/opens a customer account. Riders: the number must already be registered.
 
-**Switching to real SMS:** unset `TEST_LOGIN_CODE`, set both flags to `false`, set up the SMS provider and Send SMS hook, then run
+**Switching to real SMS:** unset `TEST_LOGIN_CODE`, set `EXPO_PUBLIC_TEST_LOGIN=false`, set up the SMS provider and Send SMS hook, then run
 `update auth.users set email = null where email like '%@test-login.nearbuy.lk';`
+
+### Admin login (phone + password)
+
+Admins sign in with their mobile number and a password — no SMS. Set or reset a password on your own computer (needs `SUPABASE_SERVICE_ROLE_KEY` in `apps/admin/.env.local`):
+
+```bash
+pnpm --filter @nearbuy/admin set-password
+```
+
+It asks for the admin's number and the new password (hidden). Behind the scenes the admin gets the internal sign-in address `<number>@admin.nearbuy.lk`.
 
 ### Google Maps
 
@@ -55,7 +65,7 @@ All three apps can sign in with a **shared team test code** instead of an SMS co
 
 1. Import the GitHub repo in Vercel.
 2. **Root Directory:** `apps/admin` (framework preset: Next.js).
-3. **Environment variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_TEST_LOGIN`.
+3. **Environment variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 4. Deploy.
 
 ### Deploying the customer web app (Vercel)
