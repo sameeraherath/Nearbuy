@@ -40,6 +40,15 @@ The admin panel also needs `SUPABASE_SERVICE_ROLE_KEY` (server-only) to create r
 3. **Environment variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 4. Deploy.
 
+### Deploying the customer web app (Vercel)
+
+The customer app also runs in the browser (same code, Expo web).
+
+1. In Vercel, add a **second** project from the same repo.
+2. **Root Directory:** `apps/customer`. Build settings come from `apps/customer/vercel.json` (`expo export --platform web` → `dist`).
+3. **Environment variables:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+4. Deploy.
+
 ### Building the mobile apps
 
 Use Expo Build (EAS) from each app folder: `npx eas-cli@latest build --platform android --profile preview` gives an installable APK. Set the two `EXPO_PUBLIC_*` variables as EAS environment variables.

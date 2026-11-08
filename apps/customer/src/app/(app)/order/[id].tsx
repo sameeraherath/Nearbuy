@@ -1,9 +1,10 @@
-import { Alert, Linking, RefreshControl, ScrollView, View } from 'react-native';
+import { Linking, RefreshControl, ScrollView, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { formatRs, ORDER_STEPS, serverErrorMessage, type OrderStatus } from '@nearbuy/shared';
 import { supabase } from '@/lib/supabase';
 import { fetchSettings, useFocusedQuery } from '@/lib/data';
 import { useOrderBroadcast } from '@/lib/realtime';
+import { confirmAction, showMessage } from '@/lib/confirm';
 import { Banner, Button, C, Card, ErrorText, Loading, StatusPill, T, s } from '@/components/ui';
 
 export default function OrderScreen() {
@@ -31,18 +32,11 @@ export default function OrderScreen() {
   const help = data.settings?.help_phone;
 
   function cancel() {
-    Alert.alert('Cancel this order?', 'You can cancel until the daily cutoff.', [
-      { text: 'Keep order', style: 'cancel' },
-      {
-        text: 'Cancel order',
-        style: 'destructive',
-        onPress: async () => {
-          const { error: err } = await supabase.rpc('cancel_order', { p_order_id: id });
-          if (err) Alert.alert('Could not cancel', serverErrorMessage(err.message));
-          reload();
-        },
-      },
-    ]);
+    confirmAction('Cancel this order?', 'You can cancel until the daily cutoff.', 'Cancel order', async () => {
+      const { error: err } = await supabase.rpc('cancel_order', { p_order_id: id });
+      if (err) showMessage('Could not cancel', serverErrorMessage(err.message));
+      reload();
+    });
   }
 
   return (

@@ -9,7 +9,7 @@ export default function AppLayout() {
         headerTransparent: false,
         headerTintColor: COLORS.text,
         headerTitleStyle: { fontWeight: '700' },
-        contentStyle: { backgroundColor: COLORS.background },
+        contentStyle: { backgroundColor: COLORS.background, width: '100%', maxWidth: 720, alignSelf: 'center' },
       }}
     >
       <Stack.Screen name="index" options={{ title: 'Nearbuy' }} />

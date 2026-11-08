@@ -1,6 +1,6 @@
 import 'react-native-url-polyfill/auto';
-import 'expo-sqlite/localStorage/install';
-import { AppState } from 'react-native';
+import './storage-setup';
+import { AppState, Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@nearbuy/shared';
 
@@ -17,10 +17,12 @@ export const supabase = createClient<Database>(url, key, {
 });
 
 // Only refresh tokens while the app is in the foreground.
-AppState.addEventListener('change', (state) => {
-  if (state === 'active') supabase.auth.startAutoRefresh();
-  else supabase.auth.stopAutoRefresh();
-});
+if (Platform.OS !== 'web') {
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') supabase.auth.startAutoRefresh();
+    else supabase.auth.stopAutoRefresh();
+  });
+}
 
 export function photoUrl(bucket: string, path: string | null | undefined) {
   return path ? `${url}/storage/v1/object/public/${bucket}/${path}` : null;

@@ -53,7 +53,7 @@ export function PhoneSignIn({
 
   return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24, gap: 20 }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24, gap: 20, width: '100%', maxWidth: 480, alignSelf: 'center' }}>
         <View>
           <T size={36} bold>
             near<T size={36} bold style={{ color: C.primary }}>buy</T>

@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { COLORS } from '@nearbuy/shared';
 import { SessionProvider, useSession } from '@/lib/session';
 import { CartProvider } from '@/lib/cart';
 
@@ -28,7 +29,7 @@ function RootNavigator() {
   if (isLoading) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.background } }}>
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
