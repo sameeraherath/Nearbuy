@@ -6,17 +6,21 @@ import { useFocusedQuery } from '@/lib/data';
 import { useSession } from '@/lib/session';
 import { Button, Card, ErrorText, Loading, StatusPill, T, s } from '@/components/ui';
 import { PhoneVerify } from '@/components/phone-verify';
+import { AppBar } from '@/components/layout';
 
 export default function Orders() {
   const { session } = useSession();
   if (!session) {
     return (
-      <View style={[s.screen, s.content]}>
-        <Card style={{ gap: 10 }}>
-          <T size={17} bold>See your orders</T>
-          <T muted size={14}>Confirm the mobile number you ordered with.</T>
-          <PhoneVerify verifyLabel="Show my orders" />
-        </Card>
+      <View style={s.screen}>
+        <AppBar title="My orders" />
+        <View style={s.content}>
+          <Card style={{ gap: 10 }}>
+            <T size={17} bold>See your orders</T>
+            <T muted size={14}>Confirm the mobile number you ordered with.</T>
+            <PhoneVerify verifyLabel="Show my orders" />
+          </Card>
+        </View>
       </View>
     );
   }
@@ -36,9 +40,12 @@ function OrdersList() {
     return rows;
   });
 
-  if (loading && !data) return <Loading />;
-
   return (
+    <View style={s.screen}>
+      <AppBar title="My orders" />
+      {loading && !data ? (
+        <Loading />
+      ) : (
     <FlatList
       style={s.screen}
       data={data ?? []}
@@ -46,7 +53,13 @@ function OrdersList() {
       contentContainerStyle={s.content}
       refreshControl={<RefreshControl refreshing={false} onRefresh={reload} />}
       ListHeaderComponent={<ErrorText>{error}</ErrorText>}
-      ListEmptyComponent={<T muted>No orders yet.</T>}
+      ListEmptyComponent={
+        <Card style={{ alignItems: 'center', gap: 6 }}>
+          <T size={32}>🍽️</T>
+          <T bold>No orders yet</T>
+          <T muted size={14}>Your orders will show up here.</T>
+        </Card>
+      }
       renderItem={({ item }) => (
         <Pressable onPress={() => router.push({ pathname: '/order/[id]', params: { id: item.id! } })}>
           <Card style={{ gap: 6 }}>
@@ -72,5 +85,7 @@ function OrdersList() {
         </View>
       }
     />
+      )}
+    </View>
   );
 }

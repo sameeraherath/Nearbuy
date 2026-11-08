@@ -11,6 +11,7 @@ import { PhoneVerify } from '@/components/phone-verify';
 import { LocationPicker } from '@/components/map';
 import { CAMPUS, distanceMeters, type LatLng } from '@/lib/geo';
 import { Banner, Button, C, Card, ErrorText, Input, Loading, T, s } from '@/components/ui';
+import { AppBar } from '@/components/layout';
 
 const SAVED = 'saved';
 /** Moving the pin further than this from a chosen place makes it a custom "Pinned location". */
@@ -68,14 +69,26 @@ export default function CartScreen() {
     if (data?.name && !name) setName(data.name);
   }, [data?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (loading && !data) return <Loading />;
+  if (loading && !data) {
+    return (
+      <View style={s.screen}>
+        <AppBar title="Your order" />
+        <Loading />
+      </View>
+    );
+  }
   const st = data?.settings;
 
   if (cart.count === 0) {
     return (
-      <View style={[s.content, { flex: 1, justifyContent: 'center' }]}>
-        <T size={18} bold style={{ textAlign: 'center' }}>Your cart is empty</T>
-        <Button title="Browse shops" onPress={() => router.replace('/')} />
+      <View style={s.screen}>
+        <AppBar title="Your order" />
+        <View style={[s.content, { flex: 1, justifyContent: 'center', gap: 16 }]}>
+          <T size={40} style={{ textAlign: 'center' }}>🛒</T>
+          <T size={18} bold style={{ textAlign: 'center' }}>Your cart is empty</T>
+          <T muted style={{ textAlign: 'center' }}>Pick a shop and add some food.</T>
+          <Button title="Browse shops" onPress={() => router.replace('/')} />
+        </View>
       </View>
     );
   }
@@ -160,7 +173,8 @@ export default function CartScreen() {
   }
 
   return (
-    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <AppBar title="Your order" subtitle={cart.shopName ?? undefined} />
       <ScrollView contentContainerStyle={[s.content, { paddingBottom: 40 }]} keyboardShouldPersistTaps="handled">
         <ErrorText>{error}</ErrorText>
         {st && !st.is_open && (

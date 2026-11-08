@@ -121,7 +121,8 @@ export function StatusPill({ status }: { status: OrderStatus }) {
 
 export const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
-  content: { padding: SIZES.screenMargin, gap: 12 },
+  /** Scroll content: padded and centred to a readable column on tablets. */
+  content: { padding: SIZES.screenMargin, gap: 12, width: '100%', maxWidth: 760, alignSelf: 'center' },
   card: {
     backgroundColor: C.surface,
     borderRadius: RADII.card,

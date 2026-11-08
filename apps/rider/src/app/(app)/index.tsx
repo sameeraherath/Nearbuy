@@ -9,6 +9,7 @@ import { useOrderBroadcast } from '@/lib/realtime';
 import { useSession } from '@/lib/session';
 import { useShareLocation } from '@/lib/use-share-location';
 import { LiveMap, type MapPoint } from '@/components/map';
+import { distanceMeters, etaMinutes, formatDistance } from '@/lib/geo';
 import { Button, C, Card, ErrorText, Loading, StatusPill, T, s } from '@/components/ui';
 
 export default function Today() {
@@ -26,7 +27,9 @@ export default function Today() {
 
   useOrderBroadcast(uid ? `rider:${uid}` : null, reload);
 
-  const onRun = (data?.orders ?? []).some((o) => o.status === 'assigned' || o.status === 'picked_up');
+  const onRun = (data?.orders ?? []).some(
+    (o) => o.status === 'assigned' || o.status === 'picked_up',
+  );
   const share = useShareLocation(onRun);
   const [view, setView] = useState<'list' | 'map'>('list');
 
@@ -34,7 +37,15 @@ export default function Today() {
   const orders = data?.orders ?? [];
 
   const toPickUp = orders.filter((o) => o.status === 'assigned');
-  const toDeliver = orders.filter((o) => o.status === 'picked_up');
+  const here = share.position;
+  // Nearest drop-off first once we know where the rider is.
+  const toDeliver = orders
+    .filter((o) => o.status === 'picked_up')
+    .map((o) => ({
+      ...o,
+      meters: here ? distanceMeters(here, { lat: o.location_lat, lng: o.location_lng }) : null,
+    }))
+    .sort((a, b) => (a.meters ?? 0) - (b.meters ?? 0));
   const done = orders.filter((o) => o.status === 'delivered');
 
   const groups = new Map<string, { name: string; orders: RiderOrder[] }>();
@@ -51,7 +62,9 @@ export default function Today() {
 
   async function pickUp(shopId: string, list: RiderOrder[]) {
     setBusyShop(shopId);
-    const { error: err } = await supabase.rpc('rider_mark_picked_up', { p_order_ids: list.map((o) => o.id) });
+    const { error: err } = await supabase.rpc('rider_mark_picked_up', {
+      p_order_ids: list.map((o) => o.id),
+    });
     setBusyShop(null);
     if (err) Alert.alert('Could not update', serverErrorMessage(err.message));
     reload();
@@ -114,7 +127,9 @@ export default function Today() {
       {orders.length === 0 && (
         <Card>
           <T bold>No orders yet</T>
-          <T muted size={14}>Orders assigned to you today will show up here.</T>
+          <T muted size={14}>
+            Orders assigned to you today will show up here.
+          </T>
         </Card>
       )}
 
@@ -135,7 +150,9 @@ export default function Today() {
                 borderColor: view === v ? C.navy : C.border,
               }}
             >
-              <T bold style={{ color: view === v ? '#fff' : C.text }}>{v === 'list' ? 'List' : 'Map'}</T>
+              <T bold style={{ color: view === v ? '#fff' : C.text }}>
+                {v === 'list' ? 'List' : 'Map'}
+              </T>
             </Pressable>
           ))}
         </View>
@@ -147,26 +164,24 @@ export default function Today() {
             height={420}
             showsUserLocation
             points={[
-              ...toDeliver.map(
-                (o): MapPoint => ({
-                  id: o.id,
-                  kind: 'stop',
-                  lat: o.location_lat,
-                  lng: o.location_lng,
-                  title: `${o.customer_name} · ${formatRs(o.total_to_collect)}`,
-                  onPress: () => router.push({ pathname: '/order/[id]', params: { id: o.id } }),
-                }),
-              ),
-              ...toPickUp.map(
-                (o): MapPoint => ({
-                  id: o.id,
-                  kind: 'home',
-                  lat: o.location_lat,
-                  lng: o.location_lng,
-                  title: `${o.customer_name} (not picked up yet)`,
-                }),
-              ),
-              ...(share.position ? [{ id: 'me', kind: 'rider' as const, ...share.position, title: 'You' }] : []),
+              ...toDeliver.map((o): MapPoint => ({
+                id: o.id,
+                kind: 'stop',
+                lat: o.location_lat,
+                lng: o.location_lng,
+                title: `${o.customer_name} · ${formatRs(o.total_to_collect)}`,
+                onPress: () => router.push({ pathname: '/order/[id]', params: { id: o.id } }),
+              })),
+              ...toPickUp.map((o): MapPoint => ({
+                id: o.id,
+                kind: 'home',
+                lat: o.location_lat,
+                lng: o.location_lng,
+                title: `${o.customer_name} (not picked up yet)`,
+              })),
+              ...(share.position
+                ? [{ id: 'me', kind: 'rider' as const, ...share.position, title: 'You' }]
+                : []),
             ]}
           />
           <T muted size={12}>
@@ -176,87 +191,110 @@ export default function Today() {
       )}
 
       {view === 'list' && groups.size > 0 && <Section title={`1. Pick up (${toPickUp.length})`} />}
-      {view === 'list' && [...groups.entries()].map(([shopId, g]) => (
-        <Card key={shopId} style={{ gap: 12 }}>
-          <View style={[s.row, { justifyContent: 'space-between' }]}>
-            <T size={18} bold>{g.name}</T>
-            <T bold>Pay {formatRs(g.orders.reduce((n, o) => n + o.items_shop_total, 0))}</T>
-          </View>
-          {g.orders.map((o) => (
-            <View key={o.id} style={{ gap: 6, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10 }}>
-              <T bold>
-                {o.order_number} · {o.customer_name}
+      {view === 'list' &&
+        [...groups.entries()].map(([shopId, g]) => (
+          <Card key={shopId} style={{ gap: 12 }}>
+            <View style={[s.row, { justifyContent: 'space-between' }]}>
+              <T size={18} bold>
+                {g.name}
               </T>
-              {o.items.map((i) => (
-                <Pressable
-                  key={i.id}
-                  disabled={busyItem === i.id}
-                  onPress={() => toggleItem(i.id, !i.is_unavailable, i.name)}
-                  style={[s.row, { justifyContent: 'space-between', minHeight: 36 }]}
-                >
-                  <T
-                    muted={i.is_unavailable}
-                    style={i.is_unavailable ? { textDecorationLine: 'line-through' } : undefined}
-                  >
-                    {i.qty} × {i.name}
-                  </T>
-                  <T size={13} style={{ color: i.is_unavailable ? C.success : C.error }}>
-                    {i.is_unavailable ? 'Undo' : 'Not available'}
-                  </T>
-                </Pressable>
-              ))}
+              <T bold>Pay {formatRs(g.orders.reduce((n, o) => n + o.items_shop_total, 0))}</T>
             </View>
-          ))}
-          <Button
-            title={`Picked up ${g.orders.length} order${g.orders.length > 1 ? 's' : ''}`}
-            loading={busyShop === shopId}
-            onPress={() => pickUp(shopId, g.orders)}
-          />
-        </Card>
-      ))}
+            {g.orders.map((o) => (
+              <View
+                key={o.id}
+                style={{ gap: 6, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 10 }}
+              >
+                <T bold>
+                  {o.order_number} · {o.customer_name}
+                </T>
+                {o.items.map((i) => (
+                  <Pressable
+                    key={i.id}
+                    disabled={busyItem === i.id}
+                    onPress={() => toggleItem(i.id, !i.is_unavailable, i.name)}
+                    style={[s.row, { justifyContent: 'space-between', minHeight: 36 }]}
+                  >
+                    <T
+                      muted={i.is_unavailable}
+                      style={i.is_unavailable ? { textDecorationLine: 'line-through' } : undefined}
+                    >
+                      {i.qty} × {i.name}
+                    </T>
+                    <T size={13} style={{ color: i.is_unavailable ? C.success : C.error }}>
+                      {i.is_unavailable ? 'Undo' : 'Not available'}
+                    </T>
+                  </Pressable>
+                ))}
+              </View>
+            ))}
+            <Button
+              title={`Picked up ${g.orders.length} order${g.orders.length > 1 ? 's' : ''}`}
+              loading={busyShop === shopId}
+              onPress={() => pickUp(shopId, g.orders)}
+            />
+          </Card>
+        ))}
 
-      {view === 'list' && toDeliver.length > 0 && <Section title={`2. Deliver (${toDeliver.length})`} />}
-      {view === 'list' && toDeliver.map((o) => (
-        <Card key={o.id} style={{ gap: 6 }}>
-          <View style={[s.row, { justifyContent: 'space-between' }]}>
-            <T size={17} bold>{o.customer_name}</T>
-            <T size={17} bold>{formatRs(o.total_to_collect)}</T>
-          </View>
-          <T>{[o.location_label, o.location_room].filter(Boolean).join(' · ')}</T>
-          {!!o.location_note && <T muted size={14}>“{o.location_note}”</T>}
-          <T muted size={13}>
-            {o.order_number} · {o.shopName}
-          </T>
-          <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-            <Button
-              title="Call"
-              variant="secondary"
-              style={{ flex: 1 }}
-              onPress={() => Linking.openURL(`tel:${o.customer_phone}`)}
-            />
-            <Button
-              title="Map"
-              variant="secondary"
-              style={{ flex: 1 }}
-              onPress={() =>
-                Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${o.location_lat},${o.location_lng}`)
-              }
-            />
-            <Button
-              title="Deliver"
-              style={{ flex: 1.4 }}
-              onPress={() => router.push({ pathname: '/order/[id]', params: { id: o.id } })}
-            />
-          </View>
-        </Card>
-      ))}
+      {view === 'list' && toDeliver.length > 0 && (
+        <Section title={`2. Deliver (${toDeliver.length})`} />
+      )}
+      {view === 'list' &&
+        toDeliver.map((o) => (
+          <Card key={o.id} style={{ gap: 6 }}>
+            <View style={[s.row, { justifyContent: 'space-between' }]}>
+              <T size={17} bold>
+                {o.customer_name}
+              </T>
+              <T size={17} bold>
+                {formatRs(o.total_to_collect)}
+              </T>
+            </View>
+            <T>{[o.location_label, o.location_room].filter(Boolean).join(' · ')}</T>
+            {!!o.location_note && (
+              <T muted size={14}>
+                “{o.location_note}”
+              </T>
+            )}
+            <T muted size={13}>
+              {o.order_number} · {o.shopName}
+              {o.meters != null &&
+                ` · ${formatDistance(o.meters)} · ~${etaMinutes(here!, { lat: o.location_lat, lng: o.location_lng })} min`}
+            </T>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+              <Button
+                title="Call"
+                variant="secondary"
+                style={{ flex: 1 }}
+                onPress={() => Linking.openURL(`tel:${o.customer_phone}`)}
+              />
+              <Button
+                title="Map"
+                variant="secondary"
+                style={{ flex: 1 }}
+                onPress={() =>
+                  Linking.openURL(
+                    `https://www.google.com/maps/search/?api=1&query=${o.location_lat},${o.location_lng}`,
+                  )
+                }
+              />
+              <Button
+                title="Deliver"
+                style={{ flex: 1.4 }}
+                onPress={() => router.push({ pathname: '/order/[id]', params: { id: o.id } })}
+              />
+            </View>
+          </Card>
+        ))}
 
       {done.length > 0 && <Section title={`Done (${done.length})`} />}
       {done.map((o) => (
         <Card key={o.id} style={[s.row, { justifyContent: 'space-between' }]}>
           <View>
             <T bold>{o.order_number}</T>
-            <T muted size={13}>{o.customer_name}</T>
+            <T muted size={13}>
+              {o.customer_name}
+            </T>
           </View>
           <View style={{ alignItems: 'flex-end', gap: 4 }}>
             <StatusPill status="delivered" />
@@ -296,7 +334,9 @@ function SharePill({ state }: { state: ReturnType<typeof useShareLocation>['stat
         backgroundColor: ok ? '#E8F5E9' : '#FDECEA',
       }}
     >
-      <T size={13} bold style={{ color: ok ? C.success : C.error }}>{text}</T>
+      <T size={13} bold style={{ color: ok ? C.success : C.error }}>
+        {text}
+      </T>
     </View>
   );
 }
@@ -304,15 +344,24 @@ function SharePill({ state }: { state: ReturnType<typeof useShareLocation>['stat
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <Card style={{ flex: 1, padding: 12 }}>
-      <T muted size={13}>{label}</T>
-      <T size={20} bold>{value}</T>
+      <T muted size={13}>
+        {label}
+      </T>
+      <T size={20} bold>
+        {value}
+      </T>
     </Card>
   );
 }
 
 function Section({ title }: { title: string }) {
   return (
-    <T size={13} bold muted style={{ marginTop: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+    <T
+      size={13}
+      bold
+      muted
+      style={{ marginTop: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}
+    >
       {title}
     </T>
   );

@@ -5,13 +5,21 @@ export function Stepper({ qty, onChange }: { qty: number; onChange: (n: number) 
   return (
     <View style={[s.row, { gap: 0 }]}>
       <Pressable onPress={() => onChange(qty - 1)} style={step} hitSlop={6}>
-        <T size={20} bold>−</T>
+        <T size={20} bold>
+          −
+        </T>
       </Pressable>
       <T bold style={{ minWidth: 28, textAlign: 'center' }}>
         {qty}
       </T>
-      <Pressable onPress={() => onChange(qty + 1)} style={[step, { backgroundColor: C.primary }]} hitSlop={6}>
-        <T size={20} bold>+</T>
+      <Pressable
+        onPress={() => onChange(qty + 1)}
+        style={[step, { backgroundColor: C.primary }]}
+        hitSlop={6}
+      >
+        <T size={20} bold>
+          +
+        </T>
       </Pressable>
     </View>
   );

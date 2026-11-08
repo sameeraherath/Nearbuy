@@ -44,10 +44,10 @@ export function PhoneVerify({
     setError(null);
     setBusy(true);
     if (TEST_LOGIN) {
-      const { data, error: fnErr } = await supabase.functions.invoke<{ access_token: string; refresh_token: string }>(
-        'test-login',
-        { body: { phone, code, app: 'customer' } },
-      );
+      const { data, error: fnErr } = await supabase.functions.invoke<{
+        access_token: string;
+        refresh_token: string;
+      }>('test-login', { body: { phone, code, app: 'customer' } });
       if (fnErr || !data) {
         setBusy(false);
         let message = fnErr?.message ?? 'Could not confirm your number';
@@ -93,8 +93,12 @@ export function PhoneVerify({
   return (
     <View style={{ gap: 10 }}>
       <T muted size={14}>
-        {TEST_LOGIN ? 'Test mode: enter the team test code for ' : `Enter the ${OTP_LENGTH}-digit code sent to `}
-        <T bold size={14}>{formatSriLankanMobile(phone)}</T>
+        {TEST_LOGIN
+          ? 'Test mode: enter the team test code for '
+          : `Enter the ${OTP_LENGTH}-digit code sent to `}
+        <T bold size={14}>
+          {formatSriLankanMobile(phone)}
+        </T>
       </T>
       <Input
         keyboardType="number-pad"

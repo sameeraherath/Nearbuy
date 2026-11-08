@@ -11,6 +11,7 @@ import { LiveMap, type MapPoint } from '@/components/map';
 
 type RiderPos = { lat: number; lng: number; updated_at: string };
 import { Banner, Button, C, Card, ErrorText, Loading, StatusPill, T, s } from '@/components/ui';
+import { AppBar } from '@/components/layout';
 
 export default function OrderScreen() {
   const { id, placed } = useLocalSearchParams<{ id: string; placed?: string }>();
@@ -51,9 +52,25 @@ export default function OrderScreen() {
     return () => clearInterval(t);
   }, [onTheWay, id]);
 
-  if (loading && !data) return <Loading />;
+  if (loading && !data) {
+    return (
+      <View style={s.screen}>
+        <AppBar title="Order" />
+        <Loading />
+      </View>
+    );
+  }
   const o = data?.order;
-  if (!o) return <View style={s.content}><ErrorText>{error ?? 'Order not found'}</ErrorText></View>;
+  if (!o) {
+    return (
+      <View style={s.screen}>
+        <AppBar title="Order" />
+        <View style={s.content}>
+          <ErrorText>{error ?? 'Order not found'}</ErrorText>
+        </View>
+      </View>
+    );
+  }
 
   const status = o.status as OrderStatus;
   const stepIndex = ORDER_STEPS.findIndex((st) => st.status === status);
@@ -69,6 +86,8 @@ export default function OrderScreen() {
   }
 
   return (
+    <View style={s.screen}>
+    <AppBar title={o.order_number ?? 'Order'} subtitle={o.business_name ?? undefined} />
     <ScrollView
       style={s.screen}
       contentContainerStyle={[s.content, { paddingBottom: 40 }]}
@@ -188,5 +207,6 @@ export default function OrderScreen() {
       {canCancel && <Button title="Cancel order" variant="danger" onPress={cancel} />}
       {!!help && <Button title="Call for help" variant="secondary" onPress={() => Linking.openURL(`tel:${help}`)} />}
     </ScrollView>
+    </View>
   );
 }

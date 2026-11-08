@@ -22,12 +22,22 @@ export function T({
   bold,
   size = 15,
   numberOfLines,
-}: PropsWithChildren<{ style?: StyleProp<TextStyle>; muted?: boolean; bold?: boolean; size?: number; numberOfLines?: number }>) {
+}: PropsWithChildren<{
+  style?: StyleProp<TextStyle>;
+  muted?: boolean;
+  bold?: boolean;
+  size?: number;
+  numberOfLines?: number;
+}>) {
   return (
     <Text
       numberOfLines={numberOfLines}
       style={[
-        { color: muted ? C.textSecondary : C.text, fontSize: size, fontWeight: bold ? '700' : '400' },
+        {
+          color: muted ? C.textSecondary : C.text,
+          fontSize: size,
+          fontWeight: bold ? '700' : '400',
+        },
         style,
       ]}
     >
@@ -64,12 +74,19 @@ export function Button({
       style={({ pressed }) => [
         s.button,
         { backgroundColor: pressed && variant === 'primary' ? C.primaryPressed : bg },
-        variant !== 'primary' && { borderWidth: 1, borderColor: variant === 'danger' ? C.error : C.border },
+        variant !== 'primary' && {
+          borderWidth: 1,
+          borderColor: variant === 'danger' ? C.error : C.border,
+        },
         (disabled || loading) && { opacity: 0.5 },
         style,
       ]}
     >
-      {loading ? <ActivityIndicator color={fg} /> : <Text style={[s.buttonText, { color: fg }]}>{title}</Text>}
+      {loading ? (
+        <ActivityIndicator color={fg} />
+      ) : (
+        <Text style={[s.buttonText, { color: fg }]}>{title}</Text>
+      )}
     </Pressable>
   );
 }
@@ -78,7 +95,11 @@ export function Input(props: TextInputProps & { label?: string }) {
   const { label, style, ...rest } = props;
   return (
     <View style={{ gap: 6 }}>
-      {label && <T size={13} muted>{label}</T>}
+      {label && (
+        <T size={13} muted>
+          {label}
+        </T>
+      )}
       <TextInput placeholderTextColor="#8D9096" style={[s.input, style]} {...rest} />
     </View>
   );
@@ -94,7 +115,11 @@ export function Loading() {
 
 export function ErrorText({ children }: PropsWithChildren) {
   if (!children) return null;
-  return <T style={{ color: C.error }} size={14}>{children}</T>;
+  return (
+    <T style={{ color: C.error }} size={14}>
+      {children}
+    </T>
+  );
 }
 
 export function Banner({ tone, children }: { tone: 'info' | 'warn' | 'ok'; children: ReactNode }) {
@@ -113,7 +138,15 @@ const STATUS: Record<OrderStatus, { label: string; bg: string; fg: string }> = {
 export function StatusPill({ status }: { status: OrderStatus }) {
   const st = STATUS[status];
   return (
-    <View style={{ backgroundColor: st.bg, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: 'flex-start' }}>
+    <View
+      style={{
+        backgroundColor: st.bg,
+        borderRadius: 999,
+        paddingHorizontal: 10,
+        paddingVertical: 3,
+        alignSelf: 'flex-start',
+      }}
+    >
       <Text style={{ color: st.fg, fontSize: 12, fontWeight: '700' }}>{st.label}</Text>
     </View>
   );
@@ -121,7 +154,14 @@ export function StatusPill({ status }: { status: OrderStatus }) {
 
 export const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.background },
-  content: { padding: SIZES.screenMargin, gap: 12 },
+  /** Scroll content: padded and centred to a readable column on wide screens. */
+  content: {
+    padding: SIZES.screenMargin,
+    gap: 12,
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
+  },
   card: {
     backgroundColor: C.surface,
     borderRadius: RADII.card,
