@@ -1,0 +1,22 @@
+{
+  "cli": {
+    "version": ">= 16.0.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "environment": "preview",
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://rxfilblkiwricvqawphh.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_qX_PA2uX566Io-Lk2pan5A_dcHAmrWk",
+        "EXPO_PUBLIC_TEST_LOGIN": "true"
+      }
+    },
+    "production": {
+      "environment": "production",
+      "android": { "buildType": "app-bundle" }
+    }
+  }
+}
