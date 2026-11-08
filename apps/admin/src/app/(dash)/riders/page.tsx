@@ -2,7 +2,7 @@ import { colomboDate, formatRs, formatSriLankanMobile } from '@nearbuy/shared';
 import { requireAdmin } from '@/lib/auth';
 import { ErrorBox, PageHeader } from '@/components/ui';
 import { ActionForm } from '@/components/action-form';
-import { createRider, updateRider } from './actions';
+import { createRider, deleteRider, updateRider } from './actions';
 
 export default async function RidersPage() {
   const { supabase } = await requireAdmin();
@@ -38,7 +38,7 @@ export default async function RidersPage() {
             <tr>
               <th className="th">Rider</th>
               <th className="th">Today</th>
-              <th className="th">Vehicle / status</th>
+              <th className="th">Name / vehicle / status</th>
             </tr>
           </thead>
           <tbody>
@@ -47,7 +47,9 @@ export default async function RidersPage() {
               return (
                 <tr key={r.profile_id}>
                   <td className="td">
-                    <div className="font-medium">{r.profiles?.full_name}</div>
+                    <div className="font-medium">
+                      {r.profiles?.full_name || <span className="text-muted">No name</span>}
+                    </div>
                     <div className="text-xs text-muted">
                       {r.profiles?.phone && formatSriLankanMobile(r.profiles.phone)}
                     </div>
@@ -64,13 +66,41 @@ export default async function RidersPage() {
                     )}
                   </td>
                   <td className="td">
-                    <ActionForm action={updateRider} submitLabel="Save" submitClassName="btn-ghost" className="flex flex-wrap items-center gap-2">
-                      <input type="hidden" name="id" value={r.profile_id} />
-                      <input name="vehicle_note" className="input w-48" defaultValue={r.vehicle_note} placeholder="Bike · ABC-1234" />
-                      <label className="flex items-center gap-1 text-sm">
-                        <input type="checkbox" name="is_active" defaultChecked={r.is_active} /> Active
-                      </label>
-                    </ActionForm>
+                    <div className="flex flex-wrap items-start gap-2">
+                      <ActionForm
+                        action={updateRider}
+                        submitLabel="Save"
+                        submitClassName="btn-ghost"
+                        className="flex flex-wrap items-center gap-2"
+                      >
+                        <input type="hidden" name="id" value={r.profile_id} />
+                        <input
+                          name="full_name"
+                          className="input w-40"
+                          defaultValue={r.profiles?.full_name ?? ''}
+                          placeholder="Name"
+                          maxLength={60}
+                        />
+                        <input
+                          name="vehicle_note"
+                          className="input w-48"
+                          defaultValue={r.vehicle_note}
+                          placeholder="Bike · ABC-1234"
+                        />
+                        <label className="flex items-center gap-1 text-sm">
+                          <input type="checkbox" name="is_active" defaultChecked={r.is_active} />{' '}
+                          Active
+                        </label>
+                      </ActionForm>
+                      <ActionForm
+                        action={deleteRider}
+                        submitLabel="Delete"
+                        submitClassName="btn-danger"
+                        confirm={`Delete ${r.profiles?.full_name || 'this rider'}? Their login is removed and this can't be undone.`}
+                      >
+                        <input type="hidden" name="id" value={r.profile_id} />
+                      </ActionForm>
+                    </div>
                   </td>
                 </tr>
               );
