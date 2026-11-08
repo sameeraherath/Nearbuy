@@ -269,7 +269,7 @@ max_frequency = "60s"
 # Keys are the phone number with country code and without the + prefix.
 # Seed users (see supabase/seed.sql) log in locally with 123456. Never set this in production.
 [auth.sms.test_otp]
-94770000001 = "123456"
+94764952122 = "123456"
 94770000011 = "123456"
 94770000012 = "123456"
 94771111111 = "123456"

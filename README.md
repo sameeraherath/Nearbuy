@@ -3,12 +3,14 @@
 Campus food delivery for students near Sabaragamuwa University, Belihuloya.
 Students order before the daily cutoff. Riders buy the food from shops in cash and deliver it in one batch. Payment is cash on delivery, and a 4-digit code proves each delivery.
 
-> **Status: Phase 1 (Foundation).** The database, security rules, order logic, seed data, shared helpers and the SMS plumbing are done. The apps come in later phases.
+> **Status:** the backend (database, security rules, order logic, SMS plumbing) is live on Supabase. The admin panel (`apps/admin`), customer app (`apps/customer`) and rider app (`apps/rider`) are built on top of it.
 
 ## Repository layout
 
 ```
-apps/                 customer (Expo, Phase 3) · rider (Expo, Phase 5) · admin (Next.js, Phase 2)
+apps/admin/           Next.js admin panel: orders board, assign riders, shops & menus, places, riders, customers, settings, SMS log
+apps/customer/        Expo app for students: shops, menu, cart, checkout, live order tracking with delivery code
+apps/rider/           Expo app for riders: today's pick-ups by shop, item unavailable, picked up, deliver with code
 packages/shared/      @nearbuy/shared: DB types, zod schemas, money/time/fee/phone helpers, constants
 supabase/
   config.toml         local Supabase config (phone-only auth, Send SMS hook, test OTPs)
@@ -18,6 +20,29 @@ supabase/
   functions/          Edge Functions: send-sms-hook, sms-dispatch, _shared/sms provider interface
 scripts/dev-vault.sh  configures the local DB to call sms-dispatch
 ```
+
+## Running the apps
+
+Each app reads the Supabase URL and publishable key from its own env file (copy the `.env.example` next to it).
+
+| App | Env file | Run |
+| --- | --- | --- |
+| Admin | `apps/admin/.env.local` | `pnpm --filter @nearbuy/admin dev` → http://localhost:3000 |
+| Customer | `apps/customer/.env` | `pnpm --filter @nearbuy/customer start` → scan the QR code with Expo Go |
+| Rider | `apps/rider/.env` | `pnpm --filter @nearbuy/rider start` → scan the QR code with Expo Go |
+
+The admin panel also needs `SUPABASE_SERVICE_ROLE_KEY` (server-only) to create rider accounts.
+
+### Deploying the admin panel (Vercel)
+
+1. Import the GitHub repo in Vercel.
+2. **Root Directory:** `apps/admin` (framework preset: Next.js).
+3. **Environment variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+4. Deploy.
+
+### Building the mobile apps
+
+Use Expo Build (EAS) from each app folder: `npx eas-cli@latest build --platform android --profile preview` gives an installable APK. Set the two `EXPO_PUBLIC_*` variables as EAS environment variables.
 
 ## Prerequisites
 
@@ -41,7 +66,7 @@ The seed numbers below log in with code **123456** (`[auth.sms.test_otp]` in `co
 
 | Role     | Phone           | Name                   |
 | -------- | --------------- | ---------------------- |
-| Admin    | +94 77 000 0001 | Nimal Perera           |
+| Admin    | +94 76 495 2122 | amsh                   |
 | Rider    | +94 77 000 0011 | Kasun Bandara          |
 | Rider    | +94 77 000 0012 | Tharindu Silva         |
 | Customer | +94 77 111 1111 | Ishara Fernando        |

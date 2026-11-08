@@ -1,7 +1,7 @@
 -- Nearbuy development seed data. Runs after migrations on `supabase db reset`.
 -- Local login codes for these numbers are fixed in config.toml ([auth.sms.test_otp]) → 123456.
 --
---   Admin     +94770000001  Nimal Perera
+--   Admin     +94764952122  amsh
 --   Rider     +94770000011  Kasun Bandara
 --   Rider     +94770000012  Tharindu Silva
 --   Customer  +94771111111  Ishara Fernando
@@ -23,7 +23,7 @@ select
   '{}'::jsonb, now(), now(),
   '', '', '', '', '', '', '', ''
 from (values
-  ('a0000000-0000-4000-8000-000000000001'::uuid, '94770000001', 'admin',    'Nimal Perera'),
+  ('a0000000-0000-4000-8000-000000000001'::uuid, '94764952122', 'admin',    'amsh'),
   ('b0000000-0000-4000-8000-000000000011'::uuid, '94770000011', 'rider',    'Kasun Bandara'),
   ('b0000000-0000-4000-8000-000000000012'::uuid, '94770000012', 'rider',    'Tharindu Silva'),
   ('c0000000-0000-4000-8000-000000000001'::uuid, '94771111111', 'customer', 'Ishara Fernando'),
@@ -46,7 +46,7 @@ insert into public.riders (profile_id, vehicle_note) values
   ('b0000000-0000-4000-8000-000000000011', 'Bike · CAB-4521'),
   ('b0000000-0000-4000-8000-000000000012', 'Scooter · BEX-7783');
 
-update public.settings set help_phone = '+94770000001';
+update public.settings set help_phone = '+94764952122';
 
 -- ---------------------------------------------------------------------------
 -- Businesses

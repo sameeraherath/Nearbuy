@@ -1,0 +1,48 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #ff9900;
+  --color-primary-pressed: #ec7211;
+  --color-primary-tint: #fff4e0;
+  --color-navy: #232f3e;
+  --color-ink: #16191f;
+  --color-muted: #545b64;
+  --color-canvas: #f2f3f3;
+  --color-line: #e9ebed;
+  --color-ok: #037f0c;
+  --color-bad: #d13212;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+@utility input {
+  @apply w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/30;
+}
+@utility label {
+  @apply mb-1 block text-xs font-medium text-muted;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-1 rounded-lg px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-primary text-ink hover:bg-primary-pressed;
+}
+@utility btn-ghost {
+  @apply btn border border-line bg-white text-ink hover:bg-canvas;
+}
+@utility btn-danger {
+  @apply btn border border-bad/30 bg-white text-bad hover:bg-bad/5;
+}
+@utility card {
+  @apply rounded-2xl border border-line bg-white;
+}
+@utility th {
+  @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted;
+}
+@utility td {
+  @apply border-t border-line px-3 py-2 align-top text-sm;
+}
