@@ -4,7 +4,7 @@ import { STORAGE_BUCKETS } from '@nearbuy/shared';
 import { requireAdmin } from '@/lib/auth';
 import { ActionForm } from '@/components/action-form';
 import { PhotoUpload } from '@/components/photo-upload';
-import { createFood, setShopCover, updateShop } from '../actions';
+import { createFood, deleteShop, setShopCover, updateShop } from '../actions';
 import { ShopFields } from '../shop-fields';
 import { FoodFields, FoodRow } from './food-row';
 
@@ -55,6 +55,21 @@ export default async function ShopPage({ params }: { params: Promise<{ id: strin
         <ActionForm action={createFood} submitLabel="Add food" resetOnSuccess>
           <input type="hidden" name="business_id" value={shop.id} />
           <FoodFields categories={categories} />
+        </ActionForm>
+      </section>
+      <section className="card border-bad/30 p-4">
+        <h2 className="mb-1 font-semibold text-bad">Delete shop</h2>
+        <p className="mb-3 text-sm text-muted">
+          Removes the shop, its whole menu and its photos. Shops with past orders can't be deleted — hide them by
+          unticking &quot;Visible to customers&quot; above.
+        </p>
+        <ActionForm
+          action={deleteShop}
+          submitLabel="Delete shop"
+          submitClassName="btn-danger"
+          confirm={`Delete ${shop.name} and its whole menu? This can't be undone.`}
+        >
+          <input type="hidden" name="id" value={shop.id} />
         </ActionForm>
       </section>
     </div>

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { businessSchema, foodSchema } from '@nearbuy/shared';
+import { businessSchema, foodSchema, STORAGE_BUCKETS } from '@nearbuy/shared';
 import { requireAdmin } from '@/lib/auth';
 import { bool, errorText, int, str, type ActionState } from '@/lib/actions';
 
@@ -111,4 +111,43 @@ export async function setFoodPhoto(id: string, businessId: string, path: string 
   const { error } = await supabase.from('foods').update({ photo_path: path }).eq('id', id);
   revalidatePath(`/shops/${businessId}`);
   return error ? { error: errorText(error) } : null;
+}
+
+/**
+ * Deletes a shop with its menu and photos. Shops that already have orders are kept for the
+ * order history — untick "Visible to customers" to hide them instead.
+ */
+export async function deleteShop(_: ActionState, form: FormData): Promise<ActionState> {
+  const { supabase } = await requireAdmin();
+  const id = str(form, 'id');
+
+  const { count, error: countError } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('business_id', id);
+  if (countError) return { error: errorText(countError) };
+  if ((count ?? 0) > 0) {
+    return {
+      error: `This shop has ${count} order(s) on record, so it can't be deleted. Untick "Visible to customers" to hide it instead.`,
+    };
+  }
+
+  // Remember its photo files, then remove them once the shop is gone (best effort).
+  const [{ data: shop }, { data: foods }] = await Promise.all([
+    supabase.from('businesses').select('cover_photo_path').eq('id', id).maybeSingle(),
+    supabase.from('foods').select('photo_path').eq('business_id', id).not('photo_path', 'is', null),
+  ]);
+
+  // Foods are removed with the shop (on delete cascade).
+  const { error } = await supabase.from('businesses').delete().eq('id', id);
+  if (error) return { error: errorText(error) };
+
+  if (shop?.cover_photo_path) {
+    await supabase.storage.from(STORAGE_BUCKETS.businessCovers).remove([shop.cover_photo_path]);
+  }
+  const foodPhotos = (foods ?? []).map((f) => f.photo_path).filter((p): p is string => !!p);
+  if (foodPhotos.length > 0) await supabase.storage.from(STORAGE_BUCKETS.foodPhotos).remove(foodPhotos);
+
+  revalidatePath('/shops');
+  redirect('/shops');
 }
