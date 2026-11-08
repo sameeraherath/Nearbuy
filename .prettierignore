@@ -1,0 +1,8 @@
+node_modules
+dist
+.next
+.expo
+.turbo
+pnpm-lock.yaml
+supabase/.temp
+*.sql
