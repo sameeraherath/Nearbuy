@@ -4,12 +4,17 @@ import { formatSriLankanMobile, normalizeSriLankanMobile, OTP_LENGTH } from '@ne
 import { supabase } from '@/lib/supabase';
 import { Button, C, ErrorText, Input, T, s } from './ui';
 
+/** TEMPORARY: while there is no SMS provider, sign in with a shared team code (see test-login function). */
+const TEST_LOGIN = process.env.EXPO_PUBLIC_TEST_LOGIN === 'true';
+
 /** Phone + SMS code sign in. `beforeSend` can reject a number (e.g. not a registered rider). */
 export function PhoneSignIn({
+  app,
   subtitle,
   beforeSend,
   createUser = true,
 }: {
+  app: 'customer' | 'rider';
   subtitle: string;
   beforeSend?: (e164: string) => Promise<string | null>;
   createUser?: boolean;
@@ -31,12 +36,17 @@ export function PhoneSignIn({
       setBusy(false);
       return setError(rejected);
     }
-    const { error: err } = await supabase.auth.signInWithOtp({
-      phone: e164,
-      options: { shouldCreateUser: createUser },
-    });
+    if (!TEST_LOGIN) {
+      const { error: err } = await supabase.auth.signInWithOtp({
+        phone: e164,
+        options: { shouldCreateUser: createUser },
+      });
+      if (err) {
+        setBusy(false);
+        return setError(err.message);
+      }
+    }
     setBusy(false);
-    if (err) return setError(err.message);
     setPhone(e164);
     setCode('');
     setStep('code');
@@ -45,6 +55,29 @@ export function PhoneSignIn({
   async function verify() {
     setError(null);
     setBusy(true);
+    if (TEST_LOGIN) {
+      const { data, error: fnErr } = await supabase.functions.invoke<{ access_token: string; refresh_token: string }>(
+        'test-login',
+        { body: { phone, code, app } },
+      );
+      if (fnErr || !data) {
+        setBusy(false);
+        let message = fnErr?.message ?? 'Could not sign in';
+        const ctx = (fnErr as { context?: Response } | null)?.context;
+        if (ctx && typeof ctx.json === 'function') {
+          try {
+            message = ((await ctx.json()) as { error?: string }).error ?? message;
+          } catch {
+            // keep the generic message
+          }
+        }
+        return setError(message);
+      }
+      const { error: sessionErr } = await supabase.auth.setSession(data);
+      setBusy(false);
+      if (sessionErr) setError(sessionErr.message);
+      return;
+    }
     const { error: err } = await supabase.auth.verifyOtp({ phone, token: code, type: 'sms' });
     setBusy(false);
     if (err) setError(err.message);
@@ -72,18 +105,24 @@ export function PhoneSignIn({
               onSubmitEditing={send}
             />
             <ErrorText>{error}</ErrorText>
-            <Button title="Send code" onPress={send} loading={busy} />
+            <Button title={TEST_LOGIN ? 'Continue' : 'Send code'} onPress={send} loading={busy} />
           </>
         ) : (
           <>
-            <T muted>
-              Enter the {OTP_LENGTH}-digit code sent to{' '}
-              <T bold>{formatSriLankanMobile(phone)}</T>
-            </T>
+            {TEST_LOGIN ? (
+              <T muted>
+                Test mode: enter the team test code for <T bold>{formatSriLankanMobile(phone)}</T>
+              </T>
+            ) : (
+              <T muted>
+                Enter the {OTP_LENGTH}-digit code sent to{' '}
+                <T bold>{formatSriLankanMobile(phone)}</T>
+              </T>
+            )}
             <Input
               keyboardType="number-pad"
               autoFocus
-              maxLength={OTP_LENGTH}
+              maxLength={TEST_LOGIN ? 32 : OTP_LENGTH}
               value={code}
               onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
               style={{ textAlign: 'center', fontSize: 24, letterSpacing: 8 }}
@@ -91,7 +130,7 @@ export function PhoneSignIn({
               autoComplete="sms-otp"
             />
             <ErrorText>{error}</ErrorText>
-            <Button title="Sign in" onPress={verify} loading={busy} disabled={code.length !== OTP_LENGTH} />
+            <Button title="Sign in" onPress={verify} loading={busy} disabled={TEST_LOGIN ? code.length < 8 : code.length !== OTP_LENGTH} />
             <Button title="Use a different number" variant="secondary" onPress={() => setStep('phone')} />
           </>
         )}

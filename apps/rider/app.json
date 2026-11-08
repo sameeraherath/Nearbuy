@@ -35,7 +35,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Nearbuy Rider shares your location with customers while you deliver their orders."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

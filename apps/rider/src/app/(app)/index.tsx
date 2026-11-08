@@ -7,6 +7,8 @@ import { fetchSettings, useFocusedQuery } from '@/lib/data';
 import { fetchMyOrders, type RiderOrder } from '@/lib/orders';
 import { useOrderBroadcast } from '@/lib/realtime';
 import { useSession } from '@/lib/session';
+import { useShareLocation } from '@/lib/use-share-location';
+import { LiveMap, type MapPoint } from '@/components/map';
 import { Button, C, Card, ErrorText, Loading, StatusPill, T, s } from '@/components/ui';
 
 export default function Today() {
@@ -23,6 +25,10 @@ export default function Today() {
   }, [uid]);
 
   useOrderBroadcast(uid ? `rider:${uid}` : null, reload);
+
+  const onRun = (data?.orders ?? []).some((o) => o.status === 'assigned' || o.status === 'picked_up');
+  const share = useShareLocation(onRun);
+  const [view, setView] = useState<'list' | 'map'>('list');
 
   if (loading && !data) return <Loading />;
   const orders = data?.orders ?? [];
@@ -94,6 +100,8 @@ export default function Today() {
       />
       <ErrorText>{error}</ErrorText>
 
+      {onRun && <SharePill state={share.state} />}
+
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <Stat label="Pay shops" value={formatRs(payShops)} />
         <Stat label="To collect" value={formatRs(toCollect)} />
@@ -110,8 +118,65 @@ export default function Today() {
         </Card>
       )}
 
-      {groups.size > 0 && <Section title={`1. Pick up (${toPickUp.length})`} />}
-      {[...groups.entries()].map(([shopId, g]) => (
+      {(toPickUp.length > 0 || toDeliver.length > 0) && (
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {(['list', 'map'] as const).map((v) => (
+            <Pressable
+              key={v}
+              onPress={() => setView(v)}
+              style={{
+                flex: 1,
+                height: 40,
+                borderRadius: 12,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: view === v ? C.navy : C.surface,
+                borderWidth: 1,
+                borderColor: view === v ? C.navy : C.border,
+              }}
+            >
+              <T bold style={{ color: view === v ? '#fff' : C.text }}>{v === 'list' ? 'List' : 'Map'}</T>
+            </Pressable>
+          ))}
+        </View>
+      )}
+
+      {view === 'map' && (toPickUp.length > 0 || toDeliver.length > 0) && (
+        <View style={{ gap: 6 }}>
+          <LiveMap
+            height={420}
+            showsUserLocation
+            points={[
+              ...toDeliver.map(
+                (o): MapPoint => ({
+                  id: o.id,
+                  kind: 'stop',
+                  lat: o.location_lat,
+                  lng: o.location_lng,
+                  title: `${o.customer_name} · ${formatRs(o.total_to_collect)}`,
+                  onPress: () => router.push({ pathname: '/order/[id]', params: { id: o.id } }),
+                }),
+              ),
+              ...toPickUp.map(
+                (o): MapPoint => ({
+                  id: o.id,
+                  kind: 'home',
+                  lat: o.location_lat,
+                  lng: o.location_lng,
+                  title: `${o.customer_name} (not picked up yet)`,
+                }),
+              ),
+              ...(share.position ? [{ id: 'me', kind: 'rider' as const, ...share.position, title: 'You' }] : []),
+            ]}
+          />
+          <T muted size={12}>
+            Red: deliver now (tap the name to open). Orange: not picked up yet.
+          </T>
+        </View>
+      )}
+
+      {view === 'list' && groups.size > 0 && <Section title={`1. Pick up (${toPickUp.length})`} />}
+      {view === 'list' && [...groups.entries()].map(([shopId, g]) => (
         <Card key={shopId} style={{ gap: 12 }}>
           <View style={[s.row, { justifyContent: 'space-between' }]}>
             <T size={18} bold>{g.name}</T>
@@ -150,8 +215,8 @@ export default function Today() {
         </Card>
       ))}
 
-      {toDeliver.length > 0 && <Section title={`2. Deliver (${toDeliver.length})`} />}
-      {toDeliver.map((o) => (
+      {view === 'list' && toDeliver.length > 0 && <Section title={`2. Deliver (${toDeliver.length})`} />}
+      {view === 'list' && toDeliver.map((o) => (
         <Card key={o.id} style={{ gap: 6 }}>
           <View style={[s.row, { justifyContent: 'space-between' }]}>
             <T size={17} bold>{o.customer_name}</T>
@@ -208,6 +273,31 @@ export default function Today() {
         />
       )}
     </ScrollView>
+  );
+}
+
+function SharePill({ state }: { state: ReturnType<typeof useShareLocation>['state'] }) {
+  const text =
+    state === 'sharing'
+      ? '● Sharing your location with customers'
+      : state === 'denied'
+        ? 'Location is off — allow location so customers can see you coming'
+        : state === 'error'
+          ? 'Could not share location — check your connection'
+          : 'Starting location…';
+  const ok = state === 'sharing';
+  return (
+    <View
+      style={{
+        alignSelf: 'flex-start',
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: ok ? '#E8F5E9' : '#FDECEA',
+      }}
+    >
+      <T size={13} bold style={{ color: ok ? C.success : C.error }}>{text}</T>
+    </View>
   );
 }
 

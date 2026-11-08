@@ -7,9 +7,13 @@ import { fetchSettings, useFocusedQuery } from '@/lib/data';
 import { useCart } from '@/lib/cart';
 import { useSession } from '@/lib/session';
 import { Stepper } from '@/components/stepper';
+import { LocationPicker } from '@/components/map';
+import { CAMPUS, distanceMeters, type LatLng } from '@/lib/geo';
 import { Banner, Button, C, Card, ErrorText, Input, Loading, T, s } from '@/components/ui';
 
 const SAVED = 'saved';
+/** Moving the pin further than this from a chosen place makes it a custom "Pinned location". */
+const SNAP_METERS = 75;
 
 export default function CartScreen() {
   const router = useRouter();
@@ -29,6 +33,7 @@ export default function CartScreen() {
   }, [uid]);
 
   const [placeKey, setPlaceKey] = useState<string | null>(null);
+  const [pin, setPin] = useState<LatLng | null>(null);
   const [room, setRoom] = useState('');
   const [note, setNote] = useState('');
   const [name, setName] = useState('');
@@ -43,8 +48,12 @@ export default function CartScreen() {
     setName(data.name);
     if (data.saved) {
       setPlaceKey(data.saved.place_id ?? SAVED);
+      setPin({ lat: data.saved.lat, lng: data.saved.lng });
       setRoom(data.saved.room);
       setNote(data.saved.note);
+    } else {
+      const first = data.places[0];
+      setPin(first ? { lat: first.lat, lng: first.lng } : CAMPUS);
     }
   }, [data, prefilled]);
 
@@ -76,16 +85,32 @@ export default function CartScreen() {
   const savedCustom = data?.saved && !data.saved.place_id ? data.saved : null;
   const chosenPlace = data?.places.find((p) => p.id === placeKey);
 
+  function choosePlace(key: string, at: LatLng) {
+    setPlaceKey(key);
+    setPin(at);
+  }
+
+  function movePin(p: LatLng) {
+    setPin(p);
+    // Snap back to "custom" when the pin leaves the chosen place / saved spot.
+    const anchor = chosenPlace ?? (placeKey === SAVED ? savedCustom : null);
+    if (anchor && distanceMeters(p, { lat: anchor.lat, lng: anchor.lng }) > SNAP_METERS) setPlaceKey(null);
+  }
+
   async function placeOrder() {
     setSubmitError(null);
     if (!name.trim()) return setSubmitError('Please enter your name');
+    if (!pin) return setSubmitError('Please choose a delivery location');
     let location;
     if (chosenPlace) {
-      location = { place_id: chosenPlace.id, label: chosenPlace.name, room, note, lat: chosenPlace.lat, lng: chosenPlace.lng };
+      location = { place_id: chosenPlace.id, label: chosenPlace.name, room, note, lat: pin.lat, lng: pin.lng };
     } else if (placeKey === SAVED && savedCustom) {
-      location = { label: savedCustom.label, room, note, lat: savedCustom.lat, lng: savedCustom.lng };
+      location = { label: savedCustom.label, room, note, lat: pin.lat, lng: pin.lng };
     } else {
-      return setSubmitError('Please choose a delivery location');
+      if (!room.trim() && !note.trim()) {
+        return setSubmitError('For a pinned location, add a room/house or a note so the rider can find you');
+      }
+      location = { label: 'Pinned location', room, note, lat: pin.lat, lng: pin.lng };
     }
     setPlacing(true);
     const { data: res, error: err } = await supabase.rpc('place_order', {
@@ -130,14 +155,27 @@ export default function CartScreen() {
 
         <Card style={{ gap: 10 }}>
           <T size={17} bold>Deliver to</T>
+          {pin && <LocationPicker value={pin} onChange={movePin} />}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {savedCustom && (
-              <Chip label={savedCustom.label} active={placeKey === SAVED} onPress={() => setPlaceKey(SAVED)} />
+              <Chip
+                label={savedCustom.label}
+                active={placeKey === SAVED}
+                onPress={() => choosePlace(SAVED, { lat: savedCustom.lat, lng: savedCustom.lng })}
+              />
             )}
             {data?.places.map((p) => (
-              <Chip key={p.id} label={p.name} active={placeKey === p.id} onPress={() => setPlaceKey(p.id)} />
+              <Chip
+                key={p.id}
+                label={p.name}
+                active={placeKey === p.id}
+                onPress={() => choosePlace(p.id, { lat: p.lat, lng: p.lng })}
+              />
             ))}
           </View>
+          {placeKey === null && pin && (
+            <T size={13} muted>📍 Pinned location — add your room or a landmark below.</T>
+          )}
           <Input label="Room / house" placeholder="e.g. Room 214" value={room} onChangeText={setRoom} maxLength={40} />
           <Input
             label="Note for the rider (optional)"

@@ -519,6 +519,44 @@ export type Database = {
           },
         ];
       };
+      rider_locations: {
+        Row: {
+          accuracy: number | null;
+          heading: number | null;
+          lat: number;
+          lng: number;
+          rider_id: string;
+          speed: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          accuracy?: number | null;
+          heading?: number | null;
+          lat: number;
+          lng: number;
+          rider_id: string;
+          speed?: number | null;
+          updated_at?: string;
+        };
+        Update: {
+          accuracy?: number | null;
+          heading?: number | null;
+          lat?: number;
+          lng?: number;
+          rider_id?: string;
+          speed?: number | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'rider_locations_rider_id_fkey';
+            columns: ['rider_id'];
+            isOneToOne: true;
+            referencedRelation: 'riders';
+            referencedColumns: ['profile_id'];
+          },
+        ];
+      };
       riders: {
         Row: {
           created_at: string;
@@ -873,6 +911,10 @@ export type Database = {
         Args: { p_phone: string; p_role: Database['public']['Enums']['user_role'] };
         Returns: boolean;
       };
+      order_rider_location: {
+        Args: { p_order_id: string };
+        Returns: { heading: number | null; lat: number; lng: number; updated_at: string }[];
+      };
       place_order: {
         Args: {
           p_business_id: string;
@@ -883,6 +925,16 @@ export type Database = {
           p_save_location?: boolean;
         };
         Returns: Json;
+      };
+      rider_update_location: {
+        Args: {
+          p_accuracy?: number;
+          p_heading?: number;
+          p_lat: number;
+          p_lng: number;
+          p_speed?: number;
+        };
+        Returns: undefined;
       };
       rider_mark_picked_up: { Args: { p_order_ids: string[] }; Returns: number };
       rider_set_item_unavailable: {

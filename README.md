@@ -33,11 +33,29 @@ Each app reads the Supabase URL and publishable key from its own env file (copy 
 
 The admin panel also needs `SUPABASE_SERVICE_ROLE_KEY` (server-only) to create rider accounts.
 
+### Test login (temporary, until an SMS provider is set up)
+
+All three apps can sign in with a **shared team test code** instead of an SMS code.
+
+- Server: the `test-login` Edge Function, enabled only while the `TEST_LOGIN_CODE` secret (8+ characters) is set in Supabase → Edge Functions → Secrets.
+- Apps: `EXPO_PUBLIC_TEST_LOGIN=true` (customer, rider) and `NEXT_PUBLIC_TEST_LOGIN=true` (admin).
+- Customers: any Sri Lankan number + the test code creates/opens a customer account. Riders/admin: the number must already be registered.
+
+**Switching to real SMS:** unset `TEST_LOGIN_CODE`, set both flags to `false`, set up the SMS provider and Send SMS hook, then run
+`update auth.users set email = null where email like '%@test-login.nearbuy.lk';`
+
+### Google Maps
+
+- Set `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` for the customer and rider apps (and on the Vercel customer-web project).
+- Enable **Maps JavaScript API** (customer web) and **Maps SDK for Android** (store builds). Restrict the key to your web domain and the app packages `lk.nearbuy.app` / `lk.nearbuy.rider`.
+- In Expo Go the native maps work without a key; the web map needs it.
+- Live tracking: the rider app shares its GPS while the rider has orders (`rider_update_location`), and the customer sees the rider on the map with an approximate arrival time once their order is picked up. The rider app must be open (background sharing needs a store build).
+
 ### Deploying the admin panel (Vercel)
 
 1. Import the GitHub repo in Vercel.
 2. **Root Directory:** `apps/admin` (framework preset: Next.js).
-3. **Environment variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+3. **Environment variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_TEST_LOGIN`.
 4. Deploy.
 
 ### Deploying the customer web app (Vercel)
@@ -46,7 +64,7 @@ The customer app also runs in the browser (same code, Expo web).
 
 1. In Vercel, add a **second** project from the same repo.
 2. **Root Directory:** `apps/customer`. Build settings come from `apps/customer/vercel.json` (`expo export --platform web` → `dist`).
-3. **Environment variables:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+3. **Environment variables:** `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY`, `EXPO_PUBLIC_TEST_LOGIN`.
 4. Deploy.
 
 ### Building the mobile apps

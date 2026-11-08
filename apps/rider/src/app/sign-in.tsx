@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 export default function SignIn() {
   return (
     <PhoneSignIn
+      app="rider"
       subtitle="Rider app. Sign in with the number your admin registered."
       createUser={false}
       beforeSend={async (phone) => {

@@ -35,7 +35,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Nearbuy uses your location to set the delivery spot for your order."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

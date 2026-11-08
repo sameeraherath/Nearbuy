@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { formatRs, MAX_CODE_ATTEMPTS, serverErrorMessage, wrongCodeMessage } from '@nearbuy/shared';
 import { supabase } from '@/lib/supabase';
 import { useFocusedQuery } from '@/lib/data';
+import { LiveMap } from '@/components/map';
 import { Banner, Button, C, Card, ErrorText, Input, Loading, T, s } from '@/components/ui';
 
 type Result = { result: 'delivered' | 'wrong_code' | 'locked'; attempts_left: number };
@@ -51,6 +52,11 @@ export default function DeliverScreen() {
           <T>{[order.location_label, order.location_room].filter(Boolean).join(' · ')}</T>
           {!!order.location_note && <T muted size={14}>“{order.location_note}”</T>}
           <T muted size={13}>{order.order_number}</T>
+          <LiveMap
+            height={180}
+            showsUserLocation
+            points={[{ id: 'drop', kind: 'stop', lat: order.location_lat, lng: order.location_lng, title: order.customer_name }]}
+          />
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
             <Button title="Call" variant="secondary" style={{ flex: 1 }} onPress={() => Linking.openURL(`tel:${order.customer_phone}`)} />
             <Button
