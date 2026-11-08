@@ -7,6 +7,7 @@ import { fetchSettings, useFocusedQuery } from '@/lib/data';
 import { useCart } from '@/lib/cart';
 import { useSession } from '@/lib/session';
 import { Stepper } from '@/components/stepper';
+import { PhoneVerify } from '@/components/phone-verify';
 import { LocationPicker } from '@/components/map';
 import { CAMPUS, distanceMeters, type LatLng } from '@/lib/geo';
 import { Banner, Button, C, Card, ErrorText, Input, Loading, T, s } from '@/components/ui';
@@ -22,11 +23,14 @@ export default function CartScreen() {
   const uid = session?.user.id;
 
   const { data, loading, error } = useFocusedQuery(async () => {
+    // Guests can check out too; saved location and name load once the number is confirmed.
     const [settings, places, saved, profile] = await Promise.all([
       fetchSettings(),
       supabase.from('places').select('*').order('sort_order').order('name'),
-      supabase.from('customer_locations').select('*').eq('customer_id', uid!).eq('is_default', true).maybeSingle(),
-      supabase.from('profiles').select('full_name').eq('id', uid!).maybeSingle(),
+      uid
+        ? supabase.from('customer_locations').select('*').eq('customer_id', uid).eq('is_default', true).maybeSingle()
+        : Promise.resolve({ data: null }),
+      uid ? supabase.from('profiles').select('full_name').eq('id', uid).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     if (places.error) throw places.error;
     return { settings, places: places.data, saved: saved.data, name: profile.data?.full_name ?? '' };
@@ -39,6 +43,8 @@ export default function CartScreen() {
   const [name, setName] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [placing, setPlacing] = useState(false);
+  /** Guest has filled everything in and is now confirming their mobile number. */
+  const [confirming, setConfirming] = useState(false);
 
   // Prefill from the saved default location and profile once.
   const [prefilled, setPrefilled] = useState(false);
@@ -56,6 +62,11 @@ export default function CartScreen() {
       setPin(first ? { lat: first.lat, lng: first.lng } : CAMPUS);
     }
   }, [data, prefilled]);
+
+  // After a returning customer confirms their number, fill in their name if still empty.
+  useEffect(() => {
+    if (data?.name && !name) setName(data.name);
+  }, [data?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading && !data) return <Loading />;
   const st = data?.settings;
@@ -97,10 +108,17 @@ export default function CartScreen() {
     if (anchor && distanceMeters(p, { lat: anchor.lat, lng: anchor.lng }) > SNAP_METERS) setPlaceKey(null);
   }
 
-  async function placeOrder() {
+  /** Validates the form; returns the delivery location or null (and shows an error). */
+  function buildLocation() {
     setSubmitError(null);
-    if (!name.trim()) return setSubmitError('Please enter your name');
-    if (!pin) return setSubmitError('Please choose a delivery location');
+    if (!name.trim()) {
+      setSubmitError('Please enter your name');
+      return null;
+    }
+    if (!pin) {
+      setSubmitError('Please choose a delivery location');
+      return null;
+    }
     let location;
     if (chosenPlace) {
       location = { place_id: chosenPlace.id, label: chosenPlace.name, room, note, lat: pin.lat, lng: pin.lng };
@@ -108,10 +126,22 @@ export default function CartScreen() {
       location = { label: savedCustom.label, room, note, lat: pin.lat, lng: pin.lng };
     } else {
       if (!room.trim() && !note.trim()) {
-        return setSubmitError('For a pinned location, add a room/house or a note so the rider can find you');
+        setSubmitError('For a pinned location, add a room/house or a note so the rider can find you');
+        return null;
       }
       location = { label: 'Pinned location', room, note, lat: pin.lat, lng: pin.lng };
     }
+    return location;
+  }
+
+  /** Guest: check the form, then ask for the mobile number as the last step. */
+  function continueToConfirm() {
+    if (buildLocation()) setConfirming(true);
+  }
+
+  async function placeOrder() {
+    const location = buildLocation();
+    if (!location) return;
     setPlacing(true);
     const { data: res, error: err } = await supabase.rpc('place_order', {
       p_business_id: cart.shopId!,
@@ -202,12 +232,32 @@ export default function CartScreen() {
         )}
 
         <ErrorText>{submitError}</ErrorText>
-        <Button
-          title={totals ? `Place order · ${formatRs(totals.total)}` : 'Place order'}
-          onPress={placeOrder}
-          loading={placing}
-          disabled={!st?.is_open || !totals?.meetsMinimum}
-        />
+        {session ? (
+          <Button
+            title={totals ? `Place order · ${formatRs(totals.total)}` : 'Place order'}
+            onPress={placeOrder}
+            loading={placing}
+            disabled={!st?.is_open || !totals?.meetsMinimum}
+          />
+        ) : confirming ? (
+          <Card style={{ gap: 10, borderColor: C.primary }}>
+            <T size={17} bold>Last step: confirm your mobile number</T>
+            <T muted size={14}>
+              We send your delivery code and order updates to this number.
+            </T>
+            <PhoneVerify
+              verifyLabel={totals ? `Confirm & place order · ${formatRs(totals.total)}` : 'Confirm & place order'}
+              onVerified={placeOrder}
+            />
+            {placing && <T muted size={14}>Placing your order…</T>}
+          </Card>
+        ) : (
+          <Button
+            title={totals ? `Continue · ${formatRs(totals.total)}` : 'Continue'}
+            onPress={continueToConfirm}
+            disabled={!st?.is_open || !totals?.meetsMinimum}
+          />
+        )}
         <T muted size={13} style={{ textAlign: 'center' }}>
           You pay the rider in cash and share your 4-digit delivery code.
         </T>

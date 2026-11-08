@@ -9,7 +9,7 @@ Students order before the daily cutoff. Riders buy the food from shops in cash a
 
 ```
 apps/admin/           Next.js admin panel: orders board, assign riders, shops & menus, places, riders, customers, settings, SMS log
-apps/customer/        Expo app for students: shops, menu, cart, checkout, live order tracking with delivery code
+apps/customer/        Expo app + website for students: browse shops and menus without an account, confirm the mobile number as the last checkout step, live order tracking
 apps/rider/           Expo app for riders: today's pick-ups by shop, item unavailable, picked up, deliver with code
 packages/shared/      @nearbuy/shared: DB types, zod schemas, money/time/fee/phone helpers, constants
 supabase/

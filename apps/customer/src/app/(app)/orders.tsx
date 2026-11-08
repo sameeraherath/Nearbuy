@@ -5,8 +5,25 @@ import { supabase } from '@/lib/supabase';
 import { useFocusedQuery } from '@/lib/data';
 import { useSession } from '@/lib/session';
 import { Button, Card, ErrorText, Loading, StatusPill, T, s } from '@/components/ui';
+import { PhoneVerify } from '@/components/phone-verify';
 
 export default function Orders() {
+  const { session } = useSession();
+  if (!session) {
+    return (
+      <View style={[s.screen, s.content]}>
+        <Card style={{ gap: 10 }}>
+          <T size={17} bold>See your orders</T>
+          <T muted size={14}>Confirm the mobile number you ordered with.</T>
+          <PhoneVerify verifyLabel="Show my orders" />
+        </Card>
+      </View>
+    );
+  }
+  return <OrdersList />;
+}
+
+function OrdersList() {
   const router = useRouter();
   const { session, signOut } = useSession();
   const { data, error, loading, reload } = useFocusedQuery(async () => {

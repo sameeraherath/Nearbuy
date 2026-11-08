@@ -19,8 +19,10 @@ export default function Root() {
   );
 }
 
+// No sign-in wall: anyone can browse shops and build a cart. The mobile number is
+// confirmed as the last step of checkout (cart) or when opening "My orders".
 function RootNavigator() {
-  const { session, isLoading } = useSession();
+  const { isLoading } = useSession();
 
   useEffect(() => {
     if (!isLoading) SplashScreen.hideAsync();
@@ -30,12 +32,7 @@ function RootNavigator() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.background } }}>
-      <Stack.Protected guard={!!session}>
-        <Stack.Screen name="(app)" />
-      </Stack.Protected>
-      <Stack.Protected guard={!session}>
-        <Stack.Screen name="sign-in" />
-      </Stack.Protected>
+      <Stack.Screen name="(app)" />
     </Stack>
   );
 }
