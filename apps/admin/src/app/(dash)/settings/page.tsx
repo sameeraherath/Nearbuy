@@ -3,6 +3,7 @@ import { ErrorBox, PageHeader } from '@/components/ui';
 import { ActionForm } from '@/components/action-form';
 import { saveSettings } from './actions';
 import { signOut } from '../actions';
+import { ChangePassword } from './change-password';
 
 export default async function SettingsPage() {
   const { supabase } = await requireAdmin();
@@ -53,6 +54,10 @@ export default async function SettingsPage() {
             </div>
           </div>
         </ActionForm>
+      </section>
+      <section className="card mt-6 p-4">
+        <h2 className="mb-3 font-semibold">Change your password</h2>
+        <ChangePassword />
       </section>
       <form action={signOut} className="mt-6">
         <button className="btn-ghost">Sign out</button>
